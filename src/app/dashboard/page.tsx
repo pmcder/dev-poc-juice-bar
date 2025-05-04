@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
-  const { isAuthenticated, user, logout, loading } = useAuth();
+  const { isAuthenticated, user, userAttributes, logout, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export default function DashboardPage() {
               <h1 className="text-xl font-semibold">Dashboard</h1>
             </div>
             <div className="flex items-center">
-              <span className="mr-4">Welcome, {user?.username}</span>
+              <span className="mr-4">Welcome, {userAttributes?.name || userAttributes?.email}</span>
               <button
                 onClick={() => logout()}
                 className="bg-red-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-600"
@@ -45,9 +45,35 @@ export default function DashboardPage() {
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <div className="border-4 border-dashed border-gray-200 rounded-lg h-96 p-4">
+          <div className="border-4 border-dashed border-gray-200 rounded-lg p-4">
             <h2 className="text-2xl font-bold mb-4">Welcome to your Dashboard</h2>
-            <p>You are successfully logged in with AWS Cognito!</p>
+            <div className="space-y-4">
+              <div className="bg-white shadow rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-2">User Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">Email</p>
+                    <p className="font-medium">{userAttributes?.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Email Verified</p>
+                    <p className="font-medium">{userAttributes?.email_verified === 'true' ? 'Yes' : 'No'}</p>
+                  </div>
+                  {userAttributes?.name && (
+                    <div>
+                      <p className="text-sm text-gray-500">Name</p>
+                      <p className="font-medium">{userAttributes.name}</p>
+                    </div>
+                  )}
+                  {userAttributes?.phone_number && (
+                    <div>
+                      <p className="text-sm text-gray-500">Phone Number</p>
+                      <p className="font-medium">{userAttributes.phone_number}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </main>

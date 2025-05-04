@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Amplify } from 'aws-amplify';
-import { signIn, signOut, getCurrentUser } from 'aws-amplify/auth';
+import { signIn, signOut, getCurrentUser, fetchUserAttributes } from 'aws-amplify/auth';
 import { awsConfig } from '@/config/cognito';
 import { useRouter } from 'next/navigation';
 
@@ -12,14 +12,25 @@ Amplify.configure({
     Cognito: {
       userPoolId: awsConfig.userPoolId,
       userPoolClientId: awsConfig.userPoolWebClientId,
-      identityPoolId: awsConfig.region // Using region as identityPoolId for now
+      region: awsConfig.region
     }
   }
 }, { ssr: true });
 
+interface UserAttributes {
+  sub: string;
+  email: string;
+  email_verified: string;
+  name?: string;
+  phone_number?: string;
+  phone_number_verified?: string;
+  [key: string]: string | undefined;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
   user: any;
+  userAttributes: UserAttributes | null;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   loading: boolean;
@@ -30,6 +41,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [userAttributes, setUserAttributes] = useState<UserAttributes | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -40,11 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function checkAuth() {
     try {
       const user = await getCurrentUser();
+      const attributes = await fetchUserAttributes();
       setIsAuthenticated(true);
       setUser(user);
+      setUserAttributes(attributes as unknown as UserAttributes);
     } catch (error) {
       setIsAuthenticated(false);
       setUser(null);
+      setUserAttributes(null);
     } finally {
       setLoading(false);
     }
@@ -55,8 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { isSignedIn, nextStep } = await signIn({ username, password });
       if (isSignedIn) {
         const user = await getCurrentUser();
+        const attributes = await fetchUserAttributes();
         setIsAuthenticated(true);
         setUser(user);
+        setUserAttributes(attributes as unknown as UserAttributes);
         router.push('/dashboard');
       }
     } catch (error) {
@@ -70,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signOut();
       setIsAuthenticated(false);
       setUser(null);
+      setUserAttributes(null);
       router.push('/login');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -78,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, loading }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, userAttributes, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
