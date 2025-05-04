@@ -31,7 +31,7 @@ export default function DashboardPage() {
               <h1 className="text-xl font-semibold">Dashboard</h1>
             </div>
             <div className="flex items-center">
-              <span className="mr-4">Welcome, {userAttributes?.name || userAttributes?.email}</span>
+              <span className="mr-4">Welcome, {userAttributes?.given_name || userAttributes?.email}</span>
               <button
                 onClick={() => logout()}
                 className="bg-red-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-600"

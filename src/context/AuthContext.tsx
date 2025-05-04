@@ -21,7 +21,7 @@ interface UserAttributes {
   sub: string;
   email: string;
   email_verified: string;
-  name?: string;
+  given_name?: string;
   phone_number?: string;
   phone_number_verified?: string;
   [key: string]: string | undefined;
