@@ -84,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(user as unknown as UserAttributes);
       setUserAttributes(attributes as unknown as UserAttributes);
       setUserGroups(groups);
-    } catch (error) {
+    } catch {
       setIsAuthenticated(false);
       setUser(null);
       setUserAttributes(null);
