@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { dynamoService, Recipe, ProductionRun } from '@/services/dynamodb';
+import FullCalendar from '@fullcalendar/react';
+import dayGridPlugin from '@fullcalendar/daygrid';
 
 function AdminDashboard() {
   const { userAttributes, logout } = useAuth();
@@ -176,7 +178,32 @@ function AdminDashboard() {
 
 function TechnicianDashboard() {
   const { userAttributes, logout } = useAuth();
-  
+  const [productionRuns, setProductionRuns] = useState<ProductionRun[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadProductionRuns();
+  }, []);
+
+  const loadProductionRuns = async () => {
+    try {
+      const runs = await dynamoService.getProductionRuns();
+      setProductionRuns(runs);
+    } catch (error) {
+      console.error('Error loading production runs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calendarEvents = productionRuns.map(run => ({
+    title: run.recipeName,
+    date: run.runDate,
+    backgroundColor: '#4F46E5', // Indigo color
+    borderColor: '#4F46E5',
+    textColor: '#ffffff'
+  }));
+
   return (
     <div className="min-h-screen bg-gray-100">
       <nav className="bg-white shadow-sm">
@@ -200,35 +227,32 @@ function TechnicianDashboard() {
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <div className="border-4 border-dashed border-gray-200 rounded-lg p-4">
-            <h2 className="text-2xl font-bold mb-4">Welcome to your Technician Dashboard</h2>
-            <div className="space-y-4">
-              <div className="bg-white shadow rounded-lg p-4">
-                <h3 className="text-lg font-semibold mb-2">User Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Email</p>
-                    <p className="font-medium">{userAttributes?.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Email Verified</p>
-                    <p className="font-medium">{userAttributes?.email_verified === 'true' ? 'Yes' : 'No'}</p>
-                  </div>
-                  {userAttributes?.name && (
-                    <div>
-                      <p className="text-sm text-gray-500">Name</p>
-                      <p className="font-medium">{userAttributes.name}</p>
-                    </div>
-                  )}
-                  {userAttributes?.phone_number && (
-                    <div>
-                      <p className="text-sm text-gray-500">Phone Number</p>
-                      <p className="font-medium">{userAttributes.phone_number}</p>
-                    </div>
-                  )}
-                </div>
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-4">Production Schedule</h2>
+            {loading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="text-lg">Loading calendar...</div>
               </div>
-            </div>
+            ) : (
+              <div className="calendar-container">
+                <FullCalendar
+                  plugins={[dayGridPlugin]}
+                  initialView="dayGridMonth"
+                  events={calendarEvents}
+                  height="auto"
+                  headerToolbar={{
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,dayGridWeek'
+                  }}
+                  eventTimeFormat={{
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    meridiem: false
+                  }}
+                />
+              </div>
+            )}
           </div>
         </div>
       </main>
