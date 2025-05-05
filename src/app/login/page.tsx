@@ -16,8 +16,9 @@ export default function LoginPage() {
     try {
       await login(username, password);
       router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during login');
+    } catch (err: Error | unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred during login';
+      setError(errorMessage);
     }
   };
 

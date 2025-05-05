@@ -44,7 +44,7 @@ interface UserAttributes {
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  user: any;
+  user: UserAttributes | null;
   userAttributes: UserAttributes | null;
   userGroups: string[];
   login: (username: string, password: string) => Promise<void>;
@@ -56,7 +56,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserAttributes | null>(null);
   const [userAttributes, setUserAttributes] = useState<UserAttributes | null>(null);
   const [userGroups, setUserGroups] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       setIsAuthenticated(true);
-      setUser(user);
+      setUser(user as unknown as UserAttributes);
       setUserAttributes(attributes as unknown as UserAttributes);
       setUserGroups(groups);
     } catch (error) {
@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function login(username: string, password: string) {
     try {
-      const { isSignedIn, nextStep } = await signIn({ username, password });
+      const { isSignedIn } = await signIn({ username, password });
       if (isSignedIn) {
         const user = await getCurrentUser();
         const attributes = await fetchUserAttributes();
@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         setIsAuthenticated(true);
-        setUser(user);
+        setUser(user as unknown as UserAttributes);
         setUserAttributes(attributes as unknown as UserAttributes);
         setUserGroups(groups);
         router.push('/dashboard');
