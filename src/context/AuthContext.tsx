@@ -2,9 +2,24 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Amplify } from 'aws-amplify';
-import { signIn, signOut, getCurrentUser, fetchUserAttributes } from 'aws-amplify/auth';
+import { signIn, signOut, getCurrentUser, fetchUserAttributes, fetchAuthSession } from 'aws-amplify/auth';
 import { awsConfig } from '@/config/cognito';
 import { useRouter } from 'next/navigation';
+
+// Function to decode JWT token
+function decodeToken(token: string) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return null;
+  }
+}
 
 // Configure Amplify
 Amplify.configure({
@@ -71,6 +86,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (isSignedIn) {
         const user = await getCurrentUser();
         const attributes = await fetchUserAttributes();
+        
+        // Get the session and decode the token
+        const { tokens } = await fetchAuthSession();
+        if (tokens?.idToken) {
+          const decodedToken = decodeToken(tokens.idToken.toString());
+          if (decodedToken && decodedToken['cognito:groups']) {
+            console.log('User group membership:', decodedToken['cognito:groups']);
+          }
+        }
+        
         setIsAuthenticated(true);
         setUser(user);
         setUserAttributes(attributes as unknown as UserAttributes);
