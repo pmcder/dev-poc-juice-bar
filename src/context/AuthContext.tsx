@@ -27,7 +27,7 @@ Amplify.configure({
     Cognito: {
       userPoolId: awsConfig.userPoolId,
       userPoolClientId: awsConfig.userPoolWebClientId,
-      region: awsConfig.region
+      identityPoolId: awsConfig.identityPoolId
     }
   }
 }, { ssr: true });
