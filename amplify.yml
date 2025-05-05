@@ -3,7 +3,8 @@ frontend:
   phases:
     preBuild:
       commands:
-        - npm ci
+        - npm install
+        - cp src/config/cognito.sample.ts src/config/cognito.ts
     build:
       commands:
         - npm run build
