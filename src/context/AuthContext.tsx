@@ -46,6 +46,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: any;
   userAttributes: UserAttributes | null;
+  userGroups: string[];
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   loading: boolean;
@@ -57,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [userAttributes, setUserAttributes] = useState<UserAttributes | null>(null);
+  const [userGroups, setUserGroups] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -68,13 +70,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const user = await getCurrentUser();
       const attributes = await fetchUserAttributes();
+      const { tokens } = await fetchAuthSession();
+      let groups: string[] = [];
+      
+      if (tokens?.idToken) {
+        const decodedToken = decodeToken(tokens.idToken.toString());
+        if (decodedToken && decodedToken['cognito:groups']) {
+          groups = decodedToken['cognito:groups'];
+        }
+      }
+      
       setIsAuthenticated(true);
       setUser(user);
       setUserAttributes(attributes as unknown as UserAttributes);
+      setUserGroups(groups);
     } catch (error) {
       setIsAuthenticated(false);
       setUser(null);
       setUserAttributes(null);
+      setUserGroups([]);
     } finally {
       setLoading(false);
     }
@@ -89,16 +103,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Get the session and decode the token
         const { tokens } = await fetchAuthSession();
+        let groups: string[] = [];
+        
         if (tokens?.idToken) {
           const decodedToken = decodeToken(tokens.idToken.toString());
           if (decodedToken && decodedToken['cognito:groups']) {
-            console.log('User group membership:', decodedToken['cognito:groups']);
+            groups = decodedToken['cognito:groups'];
+            console.log('User group membership:', groups);
           }
         }
         
         setIsAuthenticated(true);
         setUser(user);
         setUserAttributes(attributes as unknown as UserAttributes);
+        setUserGroups(groups);
         router.push('/dashboard');
       }
     } catch (error) {
@@ -113,6 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAuthenticated(false);
       setUser(null);
       setUserAttributes(null);
+      setUserGroups([]);
       router.push('/login');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -121,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, userAttributes, login, logout, loading }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, userAttributes, userGroups, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
