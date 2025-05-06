@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -9,8 +9,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, needsNewPassword } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (needsNewPassword) {
+      router.push('/change-password');
+    }
+  }, [needsNewPassword, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +25,9 @@ export default function LoginPage() {
     
     try {
       await login(username, password);
-      router.push('/dashboard');
+      if (!needsNewPassword) {
+        router.push('/dashboard');
+      }
     } catch (err: Error | unknown) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred during login';
       console.error('Login error:', err);

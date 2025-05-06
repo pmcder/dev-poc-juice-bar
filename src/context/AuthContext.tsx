@@ -59,6 +59,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   loading: boolean;
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
+  needsNewPassword: boolean;
+  tempUsername: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -117,12 +119,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       if (signInResponse.nextStep?.signInStep === 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
+        console.log('Password change required');
         // Store the username and session for password change
         setTempUsername(username);
         setNeedsNewPassword(true);
-        // Complete the sign-in with the same password (temporary password)
+        // Complete the initial sign-in with the temporary password
         await confirmSignIn({ challengeResponse: password });
-        router.push('/change-password');
         return;
       }
       
@@ -213,6 +215,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(user as unknown as UserAttributes);
       setUserAttributes(attributes as unknown as UserAttributes);
       setUserGroups(groups);
+      
+      // Navigate to dashboard
+      router.push('/dashboard');
     } catch (error) {
       console.error('Error changing password:', error);
       if (error instanceof Error) {
@@ -231,7 +236,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login, 
       logout, 
       loading,
-      changePassword 
+      changePassword,
+      needsNewPassword,
+      tempUsername
     }}>
       {children}
     </AuthContext.Provider>
