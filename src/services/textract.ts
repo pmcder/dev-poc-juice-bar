@@ -1,5 +1,14 @@
-import { TextractClient, AnalyzeDocumentCommand } from "@aws-sdk/client-textract";
+import { TextractClient, AnalyzeDocumentCommand, Block, BlockType, EntityType, Relationship } from "@aws-sdk/client-textract";
 import { fetchAuthSession } from 'aws-amplify/auth';
+
+interface KeyValueData {
+  key: string;
+  value: string | null;
+}
+
+interface TextractResponse {
+  Blocks?: Block[];
+}
 
 class TextractService {
   private async getClient() {
@@ -35,40 +44,44 @@ class TextractService {
     }
   }
 
-  private formatTextractResponse(response: any): string {
+  private formatTextractResponse(response: TextractResponse): string {
     let formattedText = "";
     let allText = "";
 
     if (response.Blocks) {
       const blocks = response.Blocks;
-      const keyValueMap = new Map();
+      const keyValueMap = new Map<string, KeyValueData>();
 
       // First pass: collect all text and key-value pairs
-      blocks.forEach((block: any) => {
+      blocks.forEach((block: Block) => {
         // Collect all text
-        if (block.BlockType === "WORD") {
+        if (block.BlockType === BlockType.WORD && block.Text) {
           allText += block.Text + " ";
         }
         
         // Collect key-value pairs
-        if (block.BlockType === "KEY_VALUE_SET") {
-          if (block.EntityTypes?.includes("KEY")) {
+        if (block.BlockType === BlockType.KEY_VALUE_SET) {
+          if (block.EntityTypes?.includes(EntityType.KEY)) {
             const key = this.getTextFromBlock(block, blocks);
-            keyValueMap.set(block.Id, {
-              key: key,
-              value: null,
-            });
-          } else if (block.EntityTypes?.includes("VALUE")) {
-            const keyBlock = blocks.find((b: any) =>
-              b.Relationships?.some((r: any) =>
-                r.Type === "CHILD" && r.Ids.includes(block.Id)
+            if (key && block.Id) {
+              keyValueMap.set(block.Id, {
+                key: key,
+                value: null,
+              });
+            }
+          } else if (block.EntityTypes?.includes(EntityType.VALUE)) {
+            const keyBlock = blocks.find((b: Block) =>
+              b.Relationships?.some((r: Relationship) =>
+                r.Type === "CHILD" && r.Ids?.includes(block.Id || '')
               )
             );
-            if (keyBlock) {
+            if (keyBlock && keyBlock.Id) {
               const keyData = keyValueMap.get(keyBlock.Id);
               if (keyData) {
                 const value = this.getTextFromBlock(block, blocks);
-                keyData.value = value;
+                if (value) {
+                  keyData.value = value;
+                }
               }
             }
           }
@@ -99,21 +112,21 @@ class TextractService {
     return formattedText.trim();
   }
 
-  private getTextFromBlock(block: any, blocks: any[]): string {
+  private getTextFromBlock(block: Block, blocks: Block[]): string | null {
     let text = "";
     if (block.Relationships) {
-      block.Relationships.forEach((relationship: any) => {
-        if (relationship.Type === "CHILD") {
+      block.Relationships.forEach((relationship: Relationship) => {
+        if (relationship.Type === "CHILD" && relationship.Ids) {
           relationship.Ids.forEach((id: string) => {
             const childBlock = blocks.find((b) => b.Id === id);
-            if (childBlock && childBlock.BlockType === "WORD") {
+            if (childBlock && childBlock.BlockType === BlockType.WORD && childBlock.Text) {
               text += childBlock.Text + " ";
             }
           });
         }
       });
     }
-    return text.trim();
+    return text.trim() || null;
   }
 }
 
