@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { dynamoService, Recipe, ProductionRun } from '@/services/dynamodb';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
+import { textractService } from '@/services/textract';
 
 function AdminDashboard() {
   const { userAttributes, logout } = useAuth();
@@ -14,6 +15,10 @@ function AdminDashboard() {
   const [newRecipeName, setNewRecipeName] = useState('');
   const [selectedRecipe, setSelectedRecipe] = useState('');
   const [runDate, setRunDate] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [extractedText, setExtractedText] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string>('');
 
   useEffect(() => {
     loadData();
@@ -59,6 +64,31 @@ function AdminDashboard() {
       loadData();
     } catch (error) {
       console.error('Error creating production run:', error);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      console.log('File selected:', e.target.files[0].name, 'Size:', e.target.files[0].size);
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleDocumentProcess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFile) return;
+
+    setIsProcessing(true);
+    try {
+      const arrayBuffer = await selectedFile.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const result = await textractService.analyzeDocument(uint8Array);
+      setExtractedText(result);
+    } catch (error) {
+      console.error('Error processing document:', error);
+      setExtractedText('Error processing document. Please try again.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -168,6 +198,47 @@ function AdminDashboard() {
                   ))}
                 </ul>
               </div>
+            </div>
+
+            {/* Document Processing Section */}
+            <div className="bg-white shadow rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4">Document Processing</h2>
+              <form onSubmit={handleDocumentProcess} className="mb-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Upload Document
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={handleFileChange}
+                      className="mt-1 block w-full text-sm text-gray-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-md file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-indigo-50 file:text-indigo-700
+                        hover:file:bg-indigo-100"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={!selectedFile || isProcessing}
+                    className="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 disabled:bg-gray-400"
+                  >
+                    {isProcessing ? 'Processing...' : 'Process Document'}
+                  </button>
+                </div>
+              </form>
+
+              {extractedText && (
+                <div className="mt-4">
+                  <h3 className="font-medium mb-2">Extracted Text:</h3>
+                  <div className="bg-gray-50 p-4 rounded-md">
+                    <pre className="whitespace-pre-wrap text-sm">{extractedText}</pre>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

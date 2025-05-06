@@ -13,6 +13,7 @@
     "@aws-amplify/core": "^6.11.4",
     "@aws-amplify/ui-react": "^6.11.1",
     "@aws-sdk/client-dynamodb": "^3.799.0",
+    "@aws-sdk/client-textract": "^3.804.0",
     "@aws-sdk/lib-dynamodb": "^3.799.0",
     "@fullcalendar/core": "^6.1.17",
     "@fullcalendar/daygrid": "^6.1.17",
