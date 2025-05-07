@@ -214,7 +214,7 @@ function AdminDashboard() {
                   {productionRuns.map((run) => (
                     <li key={run.id} className="py-2">
                       <div className="flex justify-between">
-                        <span>{run.recipeName}</span>
+                        <span className="text-gray-900">{run.recipeName}</span>
                         <span className="text-gray-500">{new Date(run.runDate).toLocaleDateString()}</span>
                       </div>
                     </li>
