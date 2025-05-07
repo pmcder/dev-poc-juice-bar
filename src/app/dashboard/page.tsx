@@ -79,13 +79,37 @@ function AdminDashboard() {
 
     setIsProcessing(true);
     try {
-      const arrayBuffer = await selectedFile.arrayBuffer();
+      // Check file size (AWS Textract has a 5MB limit)
+      if (selectedFile.size > 5 * 1024 * 1024) {
+        throw new Error('File size exceeds 5MB limit');
+      }
+
+      // Check file type
+      const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+      if (!validTypes.includes(selectedFile.type)) {
+        throw new Error('Invalid file type. Please upload a JPEG, PNG, or PDF file.');
+      }
+
+      // Read file as ArrayBuffer with error handling
+      let arrayBuffer: ArrayBuffer;
+      try {
+        arrayBuffer = await selectedFile.arrayBuffer();
+      } catch (readError) {
+        console.error('Error reading file:', readError);
+        throw new Error('Failed to read file. Please try again.');
+      }
+
+      // Convert to Uint8Array with validation
       const uint8Array = new Uint8Array(arrayBuffer);
+      if (uint8Array.length === 0) {
+        throw new Error('File appears to be empty');
+      }
+
       const result = await textractService.analyzeDocument(uint8Array);
       setExtractedText(result);
     } catch (error) {
       console.error('Error processing document:', error);
-      setExtractedText('Error processing document. Please try again.');
+      setExtractedText(error instanceof Error ? error.message : 'Error processing document. Please try again.');
     } finally {
       setIsProcessing(false);
     }
