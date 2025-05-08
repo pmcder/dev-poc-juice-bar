@@ -79,13 +79,37 @@ function AdminDashboard() {
 
     setIsProcessing(true);
     try {
-      const arrayBuffer = await selectedFile.arrayBuffer();
+      // Check file size (AWS Textract has a 5MB limit)
+      if (selectedFile.size > 5 * 1024 * 1024) {
+        throw new Error('File size exceeds 5MB limit');
+      }
+
+      // Check file type
+      const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+      if (!validTypes.includes(selectedFile.type)) {
+        throw new Error('Invalid file type. Please upload a JPEG, PNG, or PDF file.');
+      }
+
+      // Read file as ArrayBuffer with error handling
+      let arrayBuffer: ArrayBuffer;
+      try {
+        arrayBuffer = await selectedFile.arrayBuffer();
+      } catch (readError) {
+        console.error('Error reading file:', readError);
+        throw new Error('Failed to read file. Please try again.');
+      }
+
+      // Convert to Uint8Array with validation
       const uint8Array = new Uint8Array(arrayBuffer);
+      if (uint8Array.length === 0) {
+        throw new Error('File appears to be empty');
+      }
+
       const result = await textractService.analyzeDocument(uint8Array);
       setExtractedText(result);
     } catch (error) {
       console.error('Error processing document:', error);
-      setExtractedText('Error processing document. Please try again.');
+      setExtractedText(error instanceof Error ? error.message : 'Error processing document. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -97,10 +121,10 @@ function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <h1 className="text-xl font-semibold">Admin Dashboard</h1>
+              <h1 className="text-xl font-semibold text-gray-900">Admin Dashboard</h1>
             </div>
             <div className="flex items-center">
-              <span className="mr-4">Welcome, {userAttributes?.given_name || userAttributes?.email}</span>
+              <span className="mr-4 text-gray-900">Welcome, {userAttributes?.given_name || userAttributes?.email}</span>
               <button
                 onClick={() => logout()}
                 className="bg-red-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-600"
@@ -117,7 +141,7 @@ function AdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Recipe Management */}
             <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Recipe Management</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Recipe Management</h2>
               <form onSubmit={handleCreateRecipe} className="mb-6">
                 <div className="flex gap-2">
                   <input
@@ -125,7 +149,7 @@ function AdminDashboard() {
                     value={newRecipeName}
                     onChange={(e) => setNewRecipeName(e.target.value)}
                     placeholder="Enter recipe name"
-                    className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900"
                   />
                   <button
                     type="submit"
@@ -136,10 +160,10 @@ function AdminDashboard() {
                 </div>
               </form>
               <div className="space-y-2">
-                <h3 className="font-medium">Existing Recipes</h3>
+                <h3 className="font-medium text-gray-900">Existing Recipes</h3>
                 <ul className="divide-y divide-gray-200">
                   {recipes.map((recipe) => (
-                    <li key={recipe.id} className="py-2">
+                    <li key={recipe.id} className="py-2 text-gray-900">
                       {recipe.name}
                     </li>
                   ))}
@@ -149,7 +173,7 @@ function AdminDashboard() {
 
             {/* Production Run Management */}
             <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Production Run Management</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Production Run Management</h2>
               <form onSubmit={handleCreateProductionRun} className="mb-6">
                 <div className="space-y-4">
                   <div>
@@ -157,7 +181,7 @@ function AdminDashboard() {
                     <select
                       value={selectedRecipe}
                       onChange={(e) => setSelectedRecipe(e.target.value)}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900"
                     >
                       <option value="">Select a recipe</option>
                       {recipes.map((recipe) => (
@@ -173,7 +197,7 @@ function AdminDashboard() {
                       type="date"
                       value={runDate}
                       onChange={(e) => setRunDate(e.target.value)}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900"
                     />
                   </div>
                   <button
@@ -185,12 +209,12 @@ function AdminDashboard() {
                 </div>
               </form>
               <div className="space-y-2">
-                <h3 className="font-medium">Production Runs</h3>
+                <h3 className="font-medium text-gray-900">Production Runs</h3>
                 <ul className="divide-y divide-gray-200">
                   {productionRuns.map((run) => (
                     <li key={run.id} className="py-2">
                       <div className="flex justify-between">
-                        <span>{run.recipeName}</span>
+                        <span className="text-gray-900">{run.recipeName}</span>
                         <span className="text-gray-500">{new Date(run.runDate).toLocaleDateString()}</span>
                       </div>
                     </li>
@@ -201,7 +225,7 @@ function AdminDashboard() {
 
             {/* Document Processing Section */}
             <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Document Processing</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Document Processing</h2>
               <form onSubmit={handleDocumentProcess} className="mb-6">
                 <div className="space-y-4">
                   <div>
@@ -212,7 +236,7 @@ function AdminDashboard() {
                       type="file"
                       accept="image/*,.pdf"
                       onChange={handleFileChange}
-                      className="mt-1 block w-full text-sm text-gray-500
+                      className="mt-1 block w-full text-sm text-gray-900
                         file:mr-4 file:py-2 file:px-4
                         file:rounded-md file:border-0
                         file:text-sm file:font-semibold
@@ -232,9 +256,9 @@ function AdminDashboard() {
 
               {extractedText && (
                 <div className="mt-4">
-                  <h3 className="font-medium mb-2">Extracted Text:</h3>
+                  <h3 className="font-medium text-gray-900 mb-2">Extracted Text:</h3>
                   <div className="bg-gray-50 p-4 rounded-md">
-                    <pre className="whitespace-pre-wrap text-sm">{extractedText}</pre>
+                    <pre className="whitespace-pre-wrap text-sm text-gray-900">{extractedText}</pre>
                   </div>
                 </div>
               )}
@@ -280,10 +304,10 @@ function TechnicianDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <h1 className="text-xl font-semibold">Technician Dashboard</h1>
+              <h1 className="text-xl font-semibold text-gray-900">Technician Dashboard</h1>
             </div>
             <div className="flex items-center">
-              <span className="mr-4">Welcome, {userAttributes?.given_name || userAttributes?.email}</span>
+              <span className="mr-4 text-gray-900">Welcome, {userAttributes?.given_name || userAttributes?.email}</span>
               <button
                 onClick={() => logout()}
                 className="bg-red-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-600"
@@ -298,10 +322,10 @@ function TechnicianDashboard() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Production Schedule</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Production Schedule</h2>
             {loading ? (
               <div className="flex justify-center items-center h-64">
-                <div className="text-lg">Loading calendar...</div>
+                <div className="text-lg text-gray-900">Loading calendar...</div>
               </div>
             ) : (
               <div className="calendar-container">
