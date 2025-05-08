@@ -99,3 +99,22 @@ body {
   background-color: #f9fafb;
   font-weight: 500;
 }
+
+/* Additional FullCalendar text visibility fixes */
+.fc .fc-toolbar-title {
+  color: #111827 !important;
+  font-weight: 600 !important;
+}
+
+.fc .fc-button-text {
+  color: #374151 !important;
+}
+
+.fc .fc-button-primary:not(:disabled) .fc-button-text {
+  color: #374151 !important;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active .fc-button-text,
+.fc .fc-button-primary:not(:disabled):active .fc-button-text {
+  color: #ffffff !important;
+}
